@@ -441,6 +441,10 @@ class TypeSpecParser:
             else:
                 return self._map_type(field.type)
 
+        # Check for object reference
+        if field.reference and field.type == "object":
+            return field.reference
+
         # Handle union types
         if "|" in field.type:
             return "str"  # Union of string literals
