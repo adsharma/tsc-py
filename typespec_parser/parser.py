@@ -2,7 +2,10 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Dict, List, Optional
+
+from jinja2 import Template
 
 # Try to import our parsimonious parser
 try:
@@ -47,6 +50,11 @@ class TypeSpecDefinition:
 
 class TypeSpecParser:
     """Parses TypeSpec definitions and generates Python dataclasses."""
+
+    # Load Jinja template
+    template_path = Path(__file__).parent.parent / "templates" / "py-dataclasses.j2"
+    with open(template_path) as f:
+        FILE_TEMPLATE = Template(f.read())
 
     def __init__(self):
         self.definitions: Dict[str, TypeSpecDefinition] = {}
@@ -341,61 +349,40 @@ class TypeSpecParser:
         if not self.definitions:
             return ""
 
-        result = [
-            "from dataclasses import dataclass",
-            "from enum import Enum",
-            "from typing import List, Optional",
-            "",
-            "",
-        ]
+        # Prepare data for template
+        synthetic_enums = {}
+        for enum_name, values in self.synthetic_enums.items():
+            normalized_values = [self._normalize_enum_member(v) for v in values]
+            synthetic_enums[enum_name] = list(zip(normalized_values, values))
 
-        # Generate synthetic enums for string literal unions
-        for enum_name, enum_values in self.synthetic_enums.items():
-            result.append(f"class {enum_name}(Enum):")
-            for value in enum_values:
-                member = self._normalize_enum_member(value)
-                result.append(f"    {member} = '{value}'")
-            result.append("")
-
-        # Generate enums first
+        enums = {}
         for name, definition in self.definitions.items():
             if definition.type == TypeSpecType.ENUM:
-                result.append(self._generate_enum(definition))
-                result.append("")
+                normalized_values = [
+                    self._normalize_enum_member(v) for v in definition.values
+                ]
+                enums[name] = {
+                    "values": (
+                        list(zip(normalized_values, definition.values))
+                        if definition.values
+                        else []
+                    )
+                }
 
-        # Generate classes
+        dataclasses = []
         for name, definition in self.definitions.items():
             if definition.type == TypeSpecType.OBJECT:
-                result.append(self._generate_dataclass(definition))
-                result.append("")
+                field_lines = [
+                    self._generate_field(field) for field in definition.fields
+                ]
+                dataclasses.append({"name": name, "fields": field_lines})
 
-        return "\n".join(result)
-
-    def _generate_enum(self, definition: TypeSpecDefinition) -> str:
-        """Generate a Python enum."""
-        lines = [f"class {definition.name}(Enum):"]
-
-        if not definition.values:
-            lines.append("    pass")
-        else:
-            for value in definition.values:
-                # Convert to valid Python enum format
-                enum_value = self._normalize_enum_member(value)
-                lines.append(f"    {enum_value} = '{value}'")
-
-        return "\n".join(lines)
-
-    def _generate_dataclass(self, definition: TypeSpecDefinition) -> str:
-        """Generate a Python dataclass."""
-        lines = ["@dataclass", f"class {definition.name}:"]
-
-        if not definition.fields:
-            lines.append("    pass")
-        else:
-            for field_obj in definition.fields:
-                lines.append(f"    {self._generate_field(field_obj)}")
-
-        return "\n".join(lines)
+        # Render the full file
+        return self.FILE_TEMPLATE.render(
+            synthetic_enums=synthetic_enums,
+            enums=enums,
+            dataclasses=dataclasses,
+        )
 
     def _generate_field(self, field: TypeSpecField) -> str:
         """Generate a dataclass field."""
