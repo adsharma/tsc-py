@@ -8,11 +8,10 @@ version = "0.1.0"
 description = "A TypeSpec parser that generates Python dataclasses"
 readme = "README.md"
 authors = [{name = "Your Name", email = "your.email@example.com"}]
-license = {text = "MIT"}
+license = "MIT"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -38,6 +37,9 @@ Homepage = "https://github.com/yourusername/typespec-parser"
 
 [project.scripts]
 typespec-parser = "typespec_parser.cli:main"
+
+[tool.setuptools.packages.find]
+exclude = ["templates"]
 
 [tool.isort]
 profile = "black"
