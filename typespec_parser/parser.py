@@ -56,6 +56,11 @@ class TypeSpecParser:
     with open(template_path) as f:
         FILE_TEMPLATE = Template(f.read())
 
+    # Load C++ template
+    cpp_template_path = Path(__file__).parent.parent / "templates" / "cpp-headers.j2"
+    with open(cpp_template_path) as f:
+        CPP_TEMPLATE = Template(f.read())
+
     def __init__(self):
         self.definitions: Dict[str, TypeSpecDefinition] = {}
         self.synthetic_enums: Dict[str, List[str]] = {}  # For string literal unions
@@ -384,6 +389,46 @@ class TypeSpecParser:
             dataclasses=dataclasses,
         )
 
+    def generate_cpp_headers(self) -> str:
+        """Generate C++ headers from parsed definitions."""
+        if not self.definitions:
+            return ""
+
+        # Prepare data for template
+        synthetic_enums = {}
+        for enum_name, values in self.synthetic_enums.items():
+            normalized_values = [self._normalize_enum_member(v) for v in values]
+            synthetic_enums[enum_name] = list(zip(normalized_values, values))
+
+        enums = {}
+        for name, definition in self.definitions.items():
+            if definition.type == TypeSpecType.ENUM:
+                normalized_values = [
+                    self._normalize_enum_member(v) for v in definition.values
+                ]
+                enums[name] = {
+                    "values": (
+                        list(zip(normalized_values, definition.values))
+                        if definition.values
+                        else []
+                    )
+                }
+
+        dataclasses = []
+        for name, definition in self.definitions.items():
+            if definition.type == TypeSpecType.OBJECT:
+                field_lines = [
+                    self._generate_cpp_field(field) for field in definition.fields
+                ]
+                dataclasses.append({"name": name, "fields": field_lines})
+
+        # Render the full file
+        return self.CPP_TEMPLATE.render(
+            synthetic_enums=synthetic_enums,
+            enums=enums,
+            dataclasses=dataclasses,
+        )
+
     def _generate_field(self, field: TypeSpecField) -> str:
         """Generate a dataclass field."""
         # Determine the base Python type
@@ -438,6 +483,69 @@ class TypeSpecParser:
 
         # Default case - map the base type
         return self._map_type(field.type)
+
+    def _generate_cpp_field(self, field: TypeSpecField) -> str:
+        """Generate a C++ struct field."""
+        # Determine the base C++ type
+        cpp_type = self._determine_cpp_type(field)
+
+        # Apply container types (vector, optional) as needed
+        if field.is_array:
+            cpp_type = f"std::vector<{cpp_type}>"
+        elif field.is_optional:
+            cpp_type = f"std::optional<{cpp_type}>"
+
+        return f"{cpp_type} {field.name}"
+
+    def _determine_cpp_type(self, field: TypeSpecField) -> str:
+        """Determine the base C++ type for a field."""
+        # Use synthetic enum if reference is set
+        if field.reference and field.type == "enum":
+            return field.reference
+
+        # Check for direct enum reference
+        if (
+            field.reference
+            and field.reference in self.definitions
+            and self.definitions[field.reference].type == TypeSpecType.ENUM
+        ):
+            return field.reference
+
+        # Handle enum member reference like WidgetKind.Heavy
+        if (
+            field.reference
+            and isinstance(field.reference, str)
+            and "." in field.reference
+        ):
+            enum_ref = field.reference.split(".")[0]
+            if (
+                enum_ref in self.definitions
+                and self.definitions[enum_ref].type == TypeSpecType.ENUM
+            ):
+                return enum_ref
+            else:
+                return self._map_cpp_type(field.type)
+
+        # Check for object reference
+        if field.reference and field.type == "object":
+            return field.reference
+
+        # Handle union types
+        if "|" in field.type:
+            return "std::string"  # Union of string literals
+
+        # Default case - map the base type
+        return self._map_cpp_type(field.type)
+
+    def _map_cpp_type(self, typespec_type: str) -> str:
+        """Map TypeSpec types to C++ types."""
+        type_mapping = {
+            "string": "std::string",
+            "integer": "int",
+            "boolean": "bool",
+            "object": "void*",  # Placeholder for unknown objects
+        }
+        return type_mapping.get(typespec_type, "std::string")
 
     def _map_type(self, typespec_type: str) -> str:
         """Map TypeSpec types to Python types."""

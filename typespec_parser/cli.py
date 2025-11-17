@@ -10,12 +10,20 @@ from .parser import TypeSpecParser
 def main():
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
-        description="Parse TypeSpec files and generate Python dataclasses."
+        description="Parse TypeSpec files and generate code."
     )
     parser.add_argument("input", help="Input TypeSpec file")
-    parser.add_argument("-o", "--output", help="Output Python file (default: stdout)")
+    parser.add_argument("-o", "--output", help="Output file (default: stdout)")
     parser.add_argument(
-        "--no-format", action="store_true", help="Skip formatting the output with black"
+        "--language",
+        default="python",
+        choices=["python", "cpp"],
+        help="Output language (default: python)",
+    )
+    parser.add_argument(
+        "--no-format",
+        action="store_true",
+        help="Skip formatting the output with black (Python only)",
     )
 
     args = parser.parse_args()
@@ -34,10 +42,15 @@ def main():
     # Parse and generate
     ts_parser = TypeSpecParser()
     ts_parser.parse(content)
-    output = ts_parser.generate_dataclasses()
+    if args.language == "python":
+        output = ts_parser.generate_dataclasses()
+    elif args.language == "cpp":
+        output = ts_parser.generate_cpp_headers()
+    else:
+        raise ValueError(f"Unsupported language: {args.language}")
 
-    # Format with black if requested
-    if not args.no_format:
+    # Format with black if Python and requested
+    if args.language == "python" and not args.no_format:
         try:
             result = subprocess.run(
                 ["black", "-"],
