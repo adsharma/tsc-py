@@ -12,16 +12,16 @@ A Python library that parses TypeSpec definitions and generates Python dataclass
 
 ## Installation
 
-### Using pip
+### Using uv
 
 ```bash
-pip install typespec-parser
+uv pip install tsc-py
 ```
 
-### Using uv (recommended)
+### Running without installing
 
 ```bash
-uv sync --dev
+uvx tsc-py schema.tsp
 ```
 
 ## Usage
