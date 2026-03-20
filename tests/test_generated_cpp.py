@@ -76,7 +76,7 @@ class TestGeneratedCppHeaders(unittest.TestCase):
             result = subprocess.run(
                 [
                     "clang++",
-                    "--syntax-only",
+                    "-fsyntax-only",
                     test_file,
                     "-I",
                     os.path.dirname(temp_file),
