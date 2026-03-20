@@ -3,6 +3,7 @@
 import argparse
 import subprocess
 import sys
+from importlib.metadata import version
 
 from .parser import TypeSpecParser
 
@@ -11,6 +12,11 @@ def main():
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
         description="Parse TypeSpec files and generate code."
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {version('tsc-py')}",
     )
     parser.add_argument("input", help="Input TypeSpec file")
     parser.add_argument("-o", "--output", help="Output file (default: stdout)")
