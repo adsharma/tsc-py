@@ -3,11 +3,11 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "typespec-parser"
+name = "tsc-py"
 version = "0.1.0"
 description = "A TypeSpec parser that generates Python dataclasses"
 readme = "README.md"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
+authors = [{name = "Arun Sharma", email = "arun@sharma-home.net"}]
 license = "MIT"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -33,7 +33,7 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/typespec-parser"
+Homepage = "https://github.com/adsharma/tsc-py"
 
 [project.scripts]
 typespec-parser = "typespec_parser.cli:main"

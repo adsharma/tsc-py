@@ -33,7 +33,3 @@ The project implements a PEG parser for TypeSpec grammar based on the official g
 1. `typespec_parser/peg/parser.py` - Custom PEG parser implementation
 2. `typespec_parser/parser.py` - Main parser that generates Python dataclasses
 3. `example.tsp` and `example.py` - Example TypeSpec content and usage
-
-## Recent Fixes
-
-- Fixed optional field handling in the PEG parser by moving the optional marker (`?`) detection from the property parsing to the type expression parsing, which correctly follows the TypeSpec grammar specification.
